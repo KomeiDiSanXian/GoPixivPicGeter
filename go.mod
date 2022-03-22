@@ -1,4 +1,4 @@
-module github.com/KomeiDiSanXian/Scraper
+module github.com/KomeiDiSanXian/GoPixivPicGeter
 
 go 1.17
 
