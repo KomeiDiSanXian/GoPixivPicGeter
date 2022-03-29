@@ -13,12 +13,14 @@ func main() {
 	fmt.Print("定时器启动中...\n")
 	err := cron2.AddFunc("0 0 6 * * ?", func() { Download(daily) })
 	if err != nil {
+		WriteLog(err.Error())
 		fmt.Println(err)
 	} else {
 		fmt.Print("日榜计时器启动成功！\n将在每天6点时自动获取图片，并将信息写入数据库\n")
 	}
 	err = cron1.AddFunc("0 0 6 * * ?", func() { Download(monthly) })
 	if err != nil {
+		WriteLog(err.Error())
 		fmt.Println(err)
 	} else {
 		fmt.Print("月榜计时器启动成功！\n将在每天6点时自动获取图片，并将信息写入数据库\n")

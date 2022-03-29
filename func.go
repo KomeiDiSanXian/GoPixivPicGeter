@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -25,8 +26,6 @@ var IPTables = map[string]string{
 	"pixiv.net":   "210.140.92.183:443",
 	"i.pximg.net": "210.140.92.142:443",
 }
-
-var FilePath string = "./data/normal/" //下载路径
 
 //日榜json
 type Daily struct {
@@ -100,8 +99,18 @@ var link, name [50]string
 
 //模式常量
 const (
-	monthly = "Monthly"
-	daily   = "Daily"
+	monthly  = "Monthly"
+	daily    = "Daily"
+	ErrLog   = "./data/ErrorLog/"        //错误报告
+	FilePath = "./data/PixivPic/normal/" //下载路径
+	FORMAT   = "20060102"                //时间格式
+	LineFeed = "\r\n"                    //换行
+)
+
+//以天为基准写入日志/错误报告
+//路径及文件名
+var (
+	errLogPath = ErrLog + time.Now().Format(FORMAT) + ".txt"
 )
 
 //新数据写入数据库
@@ -198,6 +207,29 @@ func IsCreated(name string) (bool, error) {
 	return false, err
 }
 
+//创建文件夹
+func CreateDir(path string) error {
+	err := os.MkdirAll(path, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	os.Chmod(path, os.ModePerm)
+	return nil
+}
+
+//写错误报告
+func WriteLog(msg string) error {
+	CreateDir(ErrLog)
+	f, err := os.OpenFile(errLogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Printf("创建文件失败")
+		return err
+	}
+	_, err = io.WriteString(f, LineFeed+time.Now().Format("2006-01-02 15:04:05")+msg)
+	defer f.Close()
+	return err
+}
+
 //使用代理
 func Replace(url string) string {
 	url = strings.ReplaceAll(url, "/c/240x480", "") //使用1200的图片，原图极易被tx风控
@@ -210,6 +242,7 @@ func GetPicture(link, name string, w *sync.WaitGroup) {
 	domain, err := url.Parse(link)
 	if err != nil {
 		log.Printf("url.Parse -> %v", err)
+		WriteLog("解析 " + link + " 时出错：" + err.Error())
 	}
 	// P站特殊客户端
 	client := &http.Client{
@@ -237,6 +270,7 @@ func GetPicture(link, name string, w *sync.WaitGroup) {
 
 	if err != nil {
 		log.Printf("http.Get -> %v", err)
+		WriteLog("GET到 " + link + " 时出错：" + err.Error())
 		defer res.Body.Close()
 		log.Printf("文件传输时发生错误，重新下载%s中...", name)
 		w.Add(1)
@@ -245,10 +279,11 @@ func GetPicture(link, name string, w *sync.WaitGroup) {
 	defer res.Body.Close()
 
 	//放入文件夹
-	_ = os.MkdirAll(FilePath, 0777)
+	_ = CreateDir(FilePath)
 	out, err := os.Create(FilePath + name)
 	if err != nil {
 		log.Printf("os.Create -> %v", err)
+		WriteLog("创建文件 " + FilePath + name + " 时失败：" + err.Error())
 	}
 	wt := bufio.NewWriter(out)
 	defer out.Close()
@@ -256,6 +291,7 @@ func GetPicture(link, name string, w *sync.WaitGroup) {
 	log.Println(name, "-> write", n)
 	if err != nil {
 		log.Printf("io.Copy -> %v", err)
+		WriteLog("写入文件 " + FilePath + name + " 时失败：" + err.Error())
 		os.Remove(FilePath + name)
 		log.Printf("文件传输时发生错误，重新下载%s中...", name)
 		w.Add(1)
@@ -271,6 +307,7 @@ func Download(mode string) {
 	//创建数据库
 	db, err := gorm.Open(sqlite.Open("Pixiv.db"), &gorm.Config{})
 	if err != nil {
+		WriteLog("链接Pixiv.db失败")
 		panic("链接数据库失败")
 	}
 	db.AutoMigrate(&PictureDB{})
@@ -282,6 +319,7 @@ func Download(mode string) {
 			json, err := IdGet("https://www.pixiv.net/ranking.php?mode=monthly&content=illust&format=json&p=" + strconv.Itoa(i+1))
 			if err != nil {
 				log.Print(err)
+				WriteLog(err.Error())
 				continue
 			}
 			log.Printf("获取到月排行榜第%d页...\n", i+1)
@@ -302,6 +340,7 @@ func Download(mode string) {
 					//无论是否存在条目都写入...待修复
 					err := CreatePicData(db, json, &Tag{Tags: json.Contents[i].Tags}, i)
 					if err != nil {
+						WriteLog("创建数据库条目" + name[i] + "失败：" + err.Error())
 						log.Println("创建数据库条目", json.Contents[i].IllustID, "失败：", err)
 					}
 					w.Add(1)
@@ -318,6 +357,7 @@ func Download(mode string) {
 			json, err := IdGet("https://www.pixiv.net/ranking.php?p=" + strconv.Itoa(i+1) + "&format=json")
 			if err != nil {
 				log.Print(err)
+				WriteLog(err.Error())
 				continue
 			}
 			log.Printf("获取到日排行榜第%d页...\n", i+1)
@@ -338,6 +378,7 @@ func Download(mode string) {
 					//无论是否存在条目都写入...待修复
 					err := CreatePicData(db, json, &Tag{Tags: json.Contents[i].Tags}, i)
 					if err != nil {
+						WriteLog("创建数据库条目" + name[i] + "失败：" + err.Error())
 						log.Println("创建数据库条目", json.Contents[i].IllustID, "失败：", err)
 					}
 					w.Add(1)
