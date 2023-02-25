@@ -7,7 +7,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"net/url"
 	"sync"
 
 	"GoPixivPicGeter/crawler"
@@ -44,7 +43,7 @@ const (
 
 func NewPixivClient(dialAdress string) *http.Client {
 	// 设置req client
-	cli := &http.Client{
+	return &http.Client{
 		Transport: &http.Transport{
 			DisableKeepAlives: true,
 			// 隐藏 sni 标志
@@ -58,7 +57,6 @@ func NewPixivClient(dialAdress string) *http.Client {
 			},
 		},
 	}
-	return cli
 }
 
 func pixivBodyWriteInMySQL(illusts []model.Illust) {
@@ -95,7 +93,6 @@ func jsonToIllust(json gjson.Result) model.Illust {
 		tags = append(tags, model.Tag{TagName: v.Str})
 		return true
 	})
-	u, _ := url.Parse(json.Get("url").Str)
 	illust := model.Illust{
 		Title:           json.Get("title").Str,
 		Author:          json.Get("user_name").Str,
@@ -105,13 +102,13 @@ func jsonToIllust(json gjson.Result) model.Illust {
 		Tags:            tags,
 		PageCount:       int(json.Get("illust_page_count").Int()),
 		R18:             r18,
-		URLPath:         u.Path,
 	}
 	return illust
 }
 
 func WritePixivPicInfoInMySQL(pageSize int, url string) {
 	var wg sync.WaitGroup
+	var mu sync.RWMutex
 	for i := 0; i < pageSize; i++ {
 		wg.Add(1)
 		go func(i int) {
@@ -120,7 +117,9 @@ func WritePixivPicInfoInMySQL(pageSize int, url string) {
 				return
 			}
 			defer res.Body.Close()
+			mu.Lock()
 			pixivBodyWriteInMySQL(readPixivBody(res.Body))
+			mu.Unlock()
 			wg.Done()
 		}(i)
 	}

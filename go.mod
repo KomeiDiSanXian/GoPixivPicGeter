@@ -13,6 +13,7 @@ require (
 require (
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
+	github.com/robfig/cron v1.2.0
 	github.com/tidwall/gjson v1.14.4
 	gorm.io/driver/mysql v1.4.7
 )

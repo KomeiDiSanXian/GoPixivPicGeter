@@ -1,6 +1,11 @@
 package model
 
-import "gorm.io/gorm"
+import (
+	"errors"
+	"math/rand"
+
+	"gorm.io/gorm"
+)
 
 type Illust struct {
 	Model
@@ -13,7 +18,6 @@ type Illust struct {
 	PageCount       int
 	R18             bool
 	IsSaved         bool
-	URLPath         string
 }
 
 type Tag struct {
@@ -44,4 +48,17 @@ func (i Illust) GetIllust(db *gorm.DB) (Illust, error) {
 
 func (i Illust) Update(db *gorm.DB) error {
 	return db.Updates(&i).Error
+}
+
+func (i Illust) GetRandom(db *gorm.DB) (Illust, error) {
+	var c int64
+	var ii Illust
+	err := db.Table(i.TableName()).Count(&c).Error
+	if c == 0 {
+		return ii, errors.New("no records")
+	}
+	if err := db.Preload("Tags").Offset(rand.Intn(int(c))).First(&ii).Error; err != nil {
+		return ii, err
+	}
+	return ii, err
 }
