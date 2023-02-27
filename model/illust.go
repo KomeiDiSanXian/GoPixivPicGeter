@@ -5,6 +5,7 @@ import (
 	"math/rand"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type Illust struct {
@@ -35,7 +36,7 @@ func (t Tag) TableName() string {
 }
 
 func (i Illust) Create(db *gorm.DB) error {
-	return db.Create(&i).Error
+	return db.Clauses(clause.OnConflict{DoNothing: true}).Create(&i).Error
 }
 
 func (i Illust) GetIllust(db *gorm.DB) (Illust, error) {
@@ -61,4 +62,9 @@ func (i Illust) GetRandom(db *gorm.DB) (Illust, error) {
 		return ii, err
 	}
 	return ii, err
+}
+
+func (i Illust) UpdatePicIsSaved(db *gorm.DB) error {
+	i.IsSaved = true
+	return i.Update(db)
 }

@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 
 	"GoPixivPicGeter/crawler"
@@ -69,11 +70,14 @@ func readPixivBody(resBody io.Reader) (illusts []model.Illust) {
 	body, _ := io.ReadAll(resBody)
 	var mu sync.RWMutex
 	var wg sync.WaitGroup
+	var r18 = strings.Contains(gjson.GetBytes(body, "mode").Str, "r18")
 	gjson.GetBytes(body, "contents").ForEach(func(_, value gjson.Result) bool {
 		wg.Add(1)
 		go func() {
+			illust := jsonToIllust(value)
+			illust.R18 = r18
 			mu.Lock()
-			illusts = append(illusts, jsonToIllust(value))
+			illusts = append(illusts, illust)
 			mu.Unlock()
 			wg.Done()
 		}()
@@ -85,11 +89,7 @@ func readPixivBody(resBody io.Reader) (illusts []model.Illust) {
 
 func jsonToIllust(json gjson.Result) model.Illust {
 	var tags []model.Tag
-	var r18 bool
 	json.Get("tags").ForEach(func(_, v gjson.Result) bool {
-		if v.Str == "R-18" {
-			r18 = true
-		}
 		tags = append(tags, model.Tag{TagName: v.Str})
 		return true
 	})
@@ -101,7 +101,6 @@ func jsonToIllust(json gjson.Result) model.Illust {
 		UploadTimestamp: json.Get("illust_upload_timestamp").Int(),
 		Tags:            tags,
 		PageCount:       int(json.Get("illust_page_count").Int()),
-		R18:             r18,
 	}
 	return illust
 }
