@@ -4,21 +4,10 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"time"
 
-	"GoPixivPicGeter/global"
-	"GoPixivPicGeter/model"
 	"github.com/robfig/cron"
 )
-
-func init() {
-	db, err := model.NewDBEngine()
-	if err != nil {
-		log.Panicf("model.NewDBEngine failed: %v", err)
-	}
-	global.DBEngine = db
-}
 
 func main() {
 	cron2 := cron.New()

@@ -10,21 +10,28 @@ import (
 
 type Illust struct {
 	Model
-	Title           string
-	Author          string
-	IllustID        uint `gorm:"primaryKey;autoIncrement:false"`
-	AuthorID        uint
-	UploadTimestamp int64
-	Tags            []Tag `gorm:"foreignKey:IllustID"`
-	PageCount       int
-	R18             bool
-	IsSaved         bool
+	Title      string
+	Type       string
+	Author     User `gorm:"foreignKey:AuthorID"`
+	AuthorID   uint
+	IllustID   uint `gorm:"primaryKey;autoIncrement:false"`
+	UploadTime string
+	Tags       []Tag `gorm:"foreignKey:IllustID"`
+	PageCount  int
+	R18        bool
+	IsSaved    bool
 }
 
+type User struct {
+	AuthorID uint `gorm:"primaryKey;autoIncrement:false"`
+	Name     string
+	Account  string
+}
 type Tag struct {
 	Model
-	IllustID uint
-	TagName  string `gorm:"primaryKey"`
+	IllustID  uint
+	Name      string `gorm:"primaryKey"`
+	TransName string
 }
 
 func (i Illust) TableName() string {
@@ -33,6 +40,10 @@ func (i Illust) TableName() string {
 
 func (t Tag) TableName() string {
 	return "pixiv_tags"
+}
+
+func (u User) TableName() string {
+	return "pixiv_authors"
 }
 
 func (i Illust) Create(db *gorm.DB) error {

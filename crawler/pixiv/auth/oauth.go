@@ -9,6 +9,10 @@ import (
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~")
 
+const (
+	CODE_CHALLENGE_METHOD = "S256"
+)
+
 func init() {
 	rand.New(rand.NewSource(int64(time.Now().Nanosecond())))
 }

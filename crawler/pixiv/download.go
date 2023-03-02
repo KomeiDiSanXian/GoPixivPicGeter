@@ -15,6 +15,17 @@ import (
 	"time"
 )
 
+const (
+	referer  = "https://www.pixiv.net/"
+	filePath = "./data/PixivPic/normal/" //下载路径
+	PixivImg = "https://i.pximg.net/"
+	Original = "img-original/img/"            // 原图
+	Regular  = "img-master/img/"              // 1200
+	Small    = "c/540x540_70/img-master/img/" // 540x540
+	Thumb    = "c/250x250_80_a2/img-master/img/"
+	Mini     = "c/48x48/img-master/img/"
+)
+
 // 由pid和上传时间戳组成下载链接
 func NewPixivDownloadURL(pid uint, timestamp int64, sacle string) string {
 	form := "2006/01/02/15/04/05/"
@@ -56,7 +67,7 @@ func urlToDownload(link string, n int) string {
 }
 
 func DownloadPic(link string) {
-	cli := NewPixivClient(ipTables["i.pximg.net"])
+	cli := NewPixivClient()
 	req, _ := http.NewRequest("GET", link, nil)
 	req.Header.Set("User-Agent", crawler.GenerateRandomUA())
 	req.Header.Set("Referer", referer)

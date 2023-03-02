@@ -2,11 +2,21 @@ package model
 
 import (
 	"fmt"
+	"log"
 
+	"GoPixivPicGeter/global"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
 )
+
+func init() {
+	db, err := NewDBEngine()
+	if err != nil {
+		log.Panicf("model.NewDBEngine failed: %v", err)
+	}
+	global.DBEngine = db
+}
 
 type Model struct {
 	CreatedAt int
@@ -22,6 +32,6 @@ func NewDBEngine() (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	db.AutoMigrate(&Illust{}, &Tag{})
+	db.AutoMigrate(&Illust{}, &Tag{}, &User{})
 	return db, nil
 }
